@@ -7,6 +7,20 @@ const RED = '\x1b[31m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
 
+interface StdinData {
+  context_window?: {
+    context_window_size?: number;
+    current_usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      cache_creation_input_tokens?: number;
+      cache_read_input_tokens?: number;
+    } | null;
+    used_percentage?: number | null;
+    remaining_percentage?: number | null;
+  } | null;
+}
+
 // Color based on remaining percentage (high remaining = green, low remaining = red)
 function getColor(remainingPercent: number): string {
   if (remainingPercent > 50) return GREEN;
@@ -22,8 +36,6 @@ function calcUsedPercent(remainingPercent: number, boostPermille: number): numbe
 }
 
 // Get total quota percentage
-// boost_permille is in permille (1500 = 150%)
-// Total = base (100%) + boost = boost_permille / 10
 function getTotalPercent(boostPermille: number): number {
   return boostPermille / 10;
 }
@@ -32,11 +44,20 @@ function renderProgressBar(usedPercent: number, remainingPercent: number, width:
   const usedBlocks = Math.round((usedPercent / 100) * width);
   const remainingBlocks = width - usedBlocks;
   const color = getColor(remainingPercent);
-  // Used portion: colored blocks, Remaining portion: dim blocks
   return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
 }
 
-export function render(data: TokenPlanRemain | null): void {
+function getContextBar(usedPercent: number | null | undefined, width: number = 10): string {
+  if (usedPercent === null || usedPercent === undefined) {
+    return `${DIM}${'░'.repeat(width)}${RESET}`;
+  }
+  const usedBlocks = Math.round((usedPercent / 100) * width);
+  const remainingBlocks = width - usedBlocks;
+  const color = usedPercent > 80 ? RED : (usedPercent > 50 ? YELLOW : GREEN);
+  return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
+}
+
+export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): void {
   if (!data) {
     console.log('MiniMax ─');
     return;
@@ -48,10 +69,20 @@ export function render(data: TokenPlanRemain | null): void {
   const weeklyUsed = calcUsedPercent(data.current_weekly_remaining_percent, data.weekly_boost_permille);
   const totalPercent = getTotalPercent(data.weekly_boost_permille);
 
+  // Get context usage from stdin
+  const contextUsed = stdin.context_window?.used_percentage ?? null;
+
   const intervalBar = renderProgressBar(intervalUsed, data.current_interval_remaining_percent);
   const weeklyBar = renderProgressBar(weeklyUsed, data.current_weekly_remaining_percent);
+  const contextBar = getContextBar(contextUsed);
 
-  console.log(
-    `MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`
-  );
+  if (contextUsed !== null) {
+    console.log(
+      `Ctx ${contextBar} ${contextUsed}% │ MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`
+    );
+  } else {
+    console.log(
+      `MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`
+    );
+  }
 }

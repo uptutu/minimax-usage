@@ -19,8 +19,6 @@ function calcUsedPercent(remainingPercent, boostPermille) {
     return Math.round(usedWithBoost * 10) / 10;
 }
 // Get total quota percentage
-// boost_permille is in permille (1500 = 150%)
-// Total = base (100%) + boost = boost_permille / 10
 function getTotalPercent(boostPermille) {
     return boostPermille / 10;
 }
@@ -28,10 +26,18 @@ function renderProgressBar(usedPercent, remainingPercent, width = 10) {
     const usedBlocks = Math.round((usedPercent / 100) * width);
     const remainingBlocks = width - usedBlocks;
     const color = getColor(remainingPercent);
-    // Used portion: colored blocks, Remaining portion: dim blocks
     return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
 }
-export function render(data) {
+function getContextBar(usedPercent, width = 10) {
+    if (usedPercent === null || usedPercent === undefined) {
+        return `${DIM}${'░'.repeat(width)}${RESET}`;
+    }
+    const usedBlocks = Math.round((usedPercent / 100) * width);
+    const remainingBlocks = width - usedBlocks;
+    const color = usedPercent > 80 ? RED : (usedPercent > 50 ? YELLOW : GREEN);
+    return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
+}
+export function render(data, stdin = {}) {
     if (!data) {
         console.log('MiniMax ─');
         return;
@@ -41,7 +47,15 @@ export function render(data) {
     // 7d weekly uses boosted total
     const weeklyUsed = calcUsedPercent(data.current_weekly_remaining_percent, data.weekly_boost_permille);
     const totalPercent = getTotalPercent(data.weekly_boost_permille);
+    // Get context usage from stdin
+    const contextUsed = stdin.context_window?.used_percentage ?? null;
     const intervalBar = renderProgressBar(intervalUsed, data.current_interval_remaining_percent);
     const weeklyBar = renderProgressBar(weeklyUsed, data.current_weekly_remaining_percent);
-    console.log(`MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`);
+    const contextBar = getContextBar(contextUsed);
+    if (contextUsed !== null) {
+        console.log(`Ctx ${contextBar} ${contextUsed}% │ MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`);
+    }
+    else {
+        console.log(`MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`);
+    }
 }
