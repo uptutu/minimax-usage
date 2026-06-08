@@ -6,7 +6,10 @@
   "plugins": [
     {
       "name": "minimax-usage",
-      "source": ".",
+      "source": {
+        "source": "github",
+        "repo": "PureLo/minimax-usage"
+      },
       "description": "Display MiniMax token plan remaining usage in Claude Code HUD"
     }
   ]
