@@ -1,0 +1,13 @@
+{
+  "name": "minimax-plugins",
+  "owner": {
+    "name": "PureLo"
+  },
+  "plugins": [
+    {
+      "name": "minimax-usage",
+      "source": ".",
+      "description": "Display MiniMax token plan remaining usage in Claude Code HUD"
+    }
+  ]
+}
