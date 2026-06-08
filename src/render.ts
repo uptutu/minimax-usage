@@ -63,7 +63,7 @@ function formatRemainingTime(endTimeMs: number | undefined): string {
 }
 
 function renderProgressBar(usedPercent: number, remainingPercent: number, width: number = 10): string {
-  const usedBlocks = Math.round((usedPercent / 100) * width);
+  const usedBlocks = Math.max(1, Math.round((usedPercent / 100) * width));
   const remainingBlocks = width - usedBlocks;
   const color = getColor(remainingPercent);
   return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
