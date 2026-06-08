@@ -40,6 +40,27 @@ function getTotalPercent(boostPermille: number): number {
   return boostPermille / 10;
 }
 
+// Format remaining time
+function formatRemainingTime(endTimeMs: number): string {
+  const now = Date.now();
+  const remaining = endTimeMs - now;
+
+  if (remaining <= 0) return '0m';
+
+  const totalMinutes = Math.floor(remaining / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return `${days}d ${hours}h ${minutes}m`;
+  }
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+}
+
 function renderProgressBar(usedPercent: number, remainingPercent: number, width: number = 10): string {
   const usedBlocks = Math.round((usedPercent / 100) * width);
   const remainingBlocks = width - usedBlocks;
@@ -76,16 +97,19 @@ export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): voi
   const weeklyBar = renderProgressBar(weeklyUsed, data.current_weekly_remaining_percent);
   const contextBar = getContextBar(contextUsed);
 
+  const intervalReset = formatRemainingTime(data.end_time);
+  const weeklyReset = formatRemainingTime(data.weekly_end_time);
+
   if (contextUsed !== null) {
     console.log(
       `Context │ ctx ${contextBar} ${contextUsed}%`
     );
     console.log(
-      `MiniMax │ 5h  ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`
+      `MiniMax │ 5h  ${intervalBar} ${intervalUsed}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%) ${weeklyReset}`
     );
   } else {
     console.log(
-      `MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`
+      `MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%) ${weeklyReset}`
     );
   }
 }

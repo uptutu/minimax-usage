@@ -10,13 +10,16 @@ Shows your MiniMax API token usage limits directly in the Claude Code status bar
 ## Output Format
 
 ```
-MiniMax │ 5h ██████████ 1% (100%) │ 7d ██████████ 6% (150%)
+Context │ ctx ██░░░░░░░░ 15%
+MiniMax │ 5h  ░░░░░░░░░░ 2% (100%) 4h 8m │ 7d █░░░░░░░░░ 6% (150%) 5d 23h
 ```
 
+- `Context` - Current context window usage (when available)
 - `5h` - Five-hour usage window (base 100% quota)
 - `7d` - Seven-day weekly window (may include boost, e.g., 150%)
 - Progress bar shows usage with color coding
 - Percentages shown: used% (total%)
+- Time remaining until reset shown after each interval
 
 ## Features
 
@@ -24,6 +27,8 @@ MiniMax │ 5h ██████████ 1% (100%) │ 7d █████�
 - **Color-coded bars**: Green (>50% remaining), Yellow (20-50%), Red (<20%)
 - **Boost support**: Accounts for quota boosts (e.g., 150% total quota)
 - **Total quota display**: Shows both used amount and total quota for each interval
+- **Reset countdown**: Shows time remaining until 5h and 7d quota reset
+- **Context tracking**: Displays context window compression progress
 
 ## Requirements
 
