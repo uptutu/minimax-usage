@@ -6,6 +6,7 @@ export interface TokenPlanRemain {
     current_weekly_total_count: number;
     current_weekly_usage_count: number;
     current_weekly_remaining_percent: number;
+    weekly_boost_permille: number;
 }
 export interface TokenPlanResponse {
     model_remains: TokenPlanRemain[];
