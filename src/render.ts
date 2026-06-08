@@ -28,8 +28,8 @@ function getTotalPercent(boostPermille: number): number {
   return boostPermille / 10;
 }
 
-function renderProgressBar(remainingPercent: number, width: number = 10): string {
-  const usedBlocks = Math.round((remainingPercent / 100) * width);
+function renderProgressBar(usedPercent: number, remainingPercent: number, width: number = 10): string {
+  const usedBlocks = Math.round((usedPercent / 100) * width);
   const remainingBlocks = width - usedBlocks;
   const color = getColor(remainingPercent);
   // Used portion: colored blocks, Remaining portion: dim blocks
@@ -48,8 +48,8 @@ export function render(data: TokenPlanRemain | null): void {
   const weeklyUsed = calcUsedPercent(data.current_weekly_remaining_percent, data.weekly_boost_permille);
   const totalPercent = getTotalPercent(data.weekly_boost_permille);
 
-  const intervalBar = renderProgressBar(data.current_interval_remaining_percent);
-  const weeklyBar = renderProgressBar(data.current_weekly_remaining_percent);
+  const intervalBar = renderProgressBar(intervalUsed, data.current_interval_remaining_percent);
+  const weeklyBar = renderProgressBar(weeklyUsed, data.current_weekly_remaining_percent);
 
   console.log(
     `MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`
