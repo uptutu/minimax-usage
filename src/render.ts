@@ -41,11 +41,12 @@ function getTotalPercent(boostPermille: number): number {
 }
 
 // Format remaining time
-function formatRemainingTime(endTimeMs: number): string {
+function formatRemainingTime(endTimeMs: number | undefined): string {
+  if (!endTimeMs) return '';
   const now = Date.now();
   const remaining = endTimeMs - now;
 
-  if (remaining <= 0) return '0m';
+  if (remaining <= 0) return '';
 
   const totalMinutes = Math.floor(remaining / 60000);
   const days = Math.floor(totalMinutes / 1440);
@@ -53,12 +54,12 @@ function formatRemainingTime(endTimeMs: number): string {
   const minutes = totalMinutes % 60;
 
   if (days > 0) {
-    return `Reset ${days}d-${hours}h`;
+    return `↻${days}d${hours}h`;
   }
   if (hours > 0) {
-    return `Reset ${hours}h-${minutes}m`;
+    return `↻${hours}h${minutes}m`;
   }
-  return `Reset ${minutes}m`;
+  return `↻${minutes}m`;
 }
 
 function renderProgressBar(usedPercent: number, remainingPercent: number, width: number = 10): string {
