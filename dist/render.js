@@ -35,12 +35,12 @@ function formatRemainingTime(endTimeMs) {
     const hours = Math.floor((totalMinutes % 1440) / 60);
     const minutes = totalMinutes % 60;
     if (days > 0) {
-        return `↻${days}d${hours}h`;
+        return `⟳ ${days}d${hours}h`;
     }
     if (hours > 0) {
-        return `↻${hours}h${minutes}m`;
+        return `⟳ ${hours}h${minutes}m`;
     }
-    return `↻${minutes}m`;
+    return `⟳ ${minutes}m`;
 }
 function renderProgressBar(usedPercent, remainingPercent, width = 10) {
     const usedBlocks = Math.round((usedPercent / 100) * width);

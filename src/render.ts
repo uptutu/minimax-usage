@@ -54,12 +54,12 @@ function formatRemainingTime(endTimeMs: number | undefined): string {
   const minutes = totalMinutes % 60;
 
   if (days > 0) {
-    return `↻${days}d${hours}h`;
+    return `⟳ ${days}d${hours}h`;
   }
   if (hours > 0) {
-    return `↻${hours}h${minutes}m`;
+    return `⟳ ${hours}h${minutes}m`;
   }
-  return `↻${minutes}m`;
+  return `⟳ ${minutes}m`;
 }
 
 function renderProgressBar(usedPercent: number, remainingPercent: number, width: number = 10): string {
