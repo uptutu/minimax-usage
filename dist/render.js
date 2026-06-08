@@ -53,7 +53,8 @@ export function render(data, stdin = {}) {
     const weeklyBar = renderProgressBar(weeklyUsed, data.current_weekly_remaining_percent);
     const contextBar = getContextBar(contextUsed);
     if (contextUsed !== null) {
-        console.log(`Ctx ${contextBar} ${contextUsed}% │ MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`);
+        console.log(`Context │ ctx ${contextBar} ${contextUsed}%`);
+        console.log(`MiniMax │ 5h  ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`);
     }
     else {
         console.log(`MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`);

@@ -78,7 +78,10 @@ export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): voi
 
   if (contextUsed !== null) {
     console.log(
-      `Ctx ${contextBar} ${contextUsed}% │ MiniMax │ 5h ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`
+      `Context │ ctx ${contextBar} ${contextUsed}%`
+    );
+    console.log(
+      `MiniMax │ 5h  ${intervalBar} ${intervalUsed}% (100%) │ 7d ${weeklyBar} ${weeklyUsed}% (${totalPercent}%)`
     );
   } else {
     console.log(
