@@ -47,6 +47,21 @@ MiniMax │ 5h  █░░░░░░░░░ 3% (100%) ⟳ 3h59m │ 7d █░
 /plugin install PureLo/minimax-usage
 ```
 
+## StatusLine Conflict
+
+Claude Code's `statusLine.command` only supports **one** command. If you already have another statusline plugin configured, you have two options:
+
+**Option 1: Use pipe to combine commands**
+```bash
+# Edit ~/.claude/settings.json manually
+"statusLine": {
+  "command": "other-plugin | minimax-usage"
+}
+```
+
+**Option 2: Choose one plugin**
+Replace the existing statusline with `minimax-usage` if MiniMax usage is your priority.
+
 ## Configuration
 
 The plugin automatically reads the `ANTHROPIC_AUTH_TOKEN` environment variable for authentication. No additional configuration needed if Claude Code is already configured with your MiniMax API key.
