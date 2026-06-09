@@ -1,13 +1,20 @@
 import { getApiKey } from './config.js';
 import * as https from 'node:https';
-const API_URL = 'https://www.minimaxi.com/v1/token_plan/remains';
+const REQUEST_TIMEOUT_MS = 10_000;
 export async function fetchTokenPlan() {
     const apiKey = getApiKey();
     if (!apiKey) {
-        console.log('[minimax-usage] No API key found (ANTHROPIC_AUTH_TOKEN not set)');
+        console.error('[minimax-usage] No API key found (ANTHROPIC_AUTH_TOKEN not set)');
         return null;
     }
     return new Promise((resolve) => {
+        let settled = false;
+        const finish = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
         const req = https.request({
             hostname: 'www.minimaxi.com',
             port: 443,
@@ -23,29 +30,32 @@ export async function fetchTokenPlan() {
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
                 if (res.statusCode !== 200) {
-                    console.log(`[minimax-usage] API error: ${res.statusCode}, body: ${data.substring(0, 200)}`);
-                    resolve(null);
+                    console.error(`[minimax-usage] API error: ${res.statusCode}, body: ${data.substring(0, 200)}`);
+                    finish(null);
                     return;
                 }
                 try {
                     const json = JSON.parse(data);
                     if (json.base_resp?.status_code !== 0) {
-                        console.log(`[minimax-usage] API error: ${json.base_resp?.status_msg}`);
-                        resolve(null);
+                        console.error(`[minimax-usage] API error: ${json.base_resp?.status_msg}`);
+                        finish(null);
                         return;
                     }
                     const generalModel = json.model_remains?.find(m => m.model_name === 'general');
-                    resolve(generalModel ?? null);
+                    finish(generalModel ?? null);
                 }
                 catch {
-                    console.log('[minimax-usage] JSON parse error:', data.substring(0, 200));
-                    resolve(null);
+                    console.error('[minimax-usage] JSON parse error:', data.substring(0, 200));
+                    finish(null);
                 }
             });
         });
         req.on('error', (error) => {
-            console.log('[minimax-usage] Network error:', error.message);
-            resolve(null);
+            console.error('[minimax-usage] Network error:', error.message);
+            finish(null);
+        });
+        req.setTimeout(REQUEST_TIMEOUT_MS, () => {
+            req.destroy(new Error('Request timed out'));
         });
         req.end();
     });

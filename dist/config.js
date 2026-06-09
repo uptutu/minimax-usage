@@ -5,8 +5,9 @@ const DEFAULT_CONFIG = {
     refreshIntervalMs: 60_000,
 };
 function getConfigDir() {
-    const homeDir = os.homedir();
-    return path.join(homeDir, '.claude', 'plugins', 'minimax-usage');
+    const claudeConfigDir = process.env.CLAUDE_CONFIG_DIR
+        ?? path.join(os.homedir(), '.claude');
+    return path.join(claudeConfigDir, 'plugins', 'minimax-usage');
 }
 function getConfigPath() {
     return path.join(getConfigDir(), 'config.json');
@@ -19,10 +20,13 @@ export function loadConfig() {
         }
         const content = fs.readFileSync(configPath, 'utf-8');
         const userConfig = JSON.parse(content);
+        const refreshIntervalMs = typeof userConfig.refreshIntervalMs === 'number'
+            && Number.isFinite(userConfig.refreshIntervalMs)
+            && userConfig.refreshIntervalMs > 0
+            ? userConfig.refreshIntervalMs
+            : DEFAULT_CONFIG.refreshIntervalMs;
         return {
-            refreshIntervalMs: typeof userConfig.refreshIntervalMs === 'number'
-                ? userConfig.refreshIntervalMs
-                : DEFAULT_CONFIG.refreshIntervalMs,
+            refreshIntervalMs,
         };
     }
     catch {

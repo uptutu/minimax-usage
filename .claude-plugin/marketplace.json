@@ -1,5 +1,6 @@
 {
   "name": "minimax-plugins",
+  "description": "MiniMax-related Claude Code plugins",
   "owner": {
     "name": "PureLo"
   },

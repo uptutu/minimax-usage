@@ -8,8 +8,9 @@ const DEFAULT_CONFIG: MiniMaxConfig = {
 };
 
 function getConfigDir(): string {
-  const homeDir = os.homedir();
-  return path.join(homeDir, '.claude', 'plugins', 'minimax-usage');
+  const claudeConfigDir = process.env.CLAUDE_CONFIG_DIR
+    ?? path.join(os.homedir(), '.claude');
+  return path.join(claudeConfigDir, 'plugins', 'minimax-usage');
 }
 
 function getConfigPath(): string {
@@ -26,11 +27,14 @@ export function loadConfig(): MiniMaxConfig {
 
     const content = fs.readFileSync(configPath, 'utf-8');
     const userConfig = JSON.parse(content) as Partial<MiniMaxConfig>;
+    const refreshIntervalMs = typeof userConfig.refreshIntervalMs === 'number'
+      && Number.isFinite(userConfig.refreshIntervalMs)
+      && userConfig.refreshIntervalMs > 0
+      ? userConfig.refreshIntervalMs
+      : DEFAULT_CONFIG.refreshIntervalMs;
 
     return {
-      refreshIntervalMs: typeof userConfig.refreshIntervalMs === 'number'
-        ? userConfig.refreshIntervalMs
-        : DEFAULT_CONFIG.refreshIntervalMs,
+      refreshIntervalMs,
     };
   } catch {
     return DEFAULT_CONFIG;

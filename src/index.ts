@@ -1,4 +1,5 @@
 import { fetchTokenPlan } from './api.js';
+import { getCached, setCached } from './cache.js';
 import { render } from './render.js';
 
 interface StdinData {
@@ -15,6 +16,8 @@ interface StdinData {
   } | null;
 }
 
+const CACHE_KEY = 'token-plan';
+
 async function main(): Promise<void> {
   // Read stdin from Claude Code
   let stdinData: StdinData = {};
@@ -27,8 +30,17 @@ async function main(): Promise<void> {
     // Ignore stdin errors
   }
 
-  // Always fetch fresh data to ensure accuracy
+  const cached = getCached(CACHE_KEY);
+  if (cached) {
+    render(cached, stdinData);
+    return;
+  }
+
   const data = await fetchTokenPlan();
+  if (data) {
+    setCached(CACHE_KEY, data);
+  }
+
   render(data, stdinData);
 }
 

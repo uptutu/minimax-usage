@@ -39,12 +39,9 @@ MiniMax │ 5h  █░░░░░░░░░ 3% (100%) ⟳ 3h59m │ 7d █░
 ## Installation
 
 ```bash
-# Install via marketplace
+# Add the GitHub-hosted marketplace, then install the plugin
 /plugin marketplace add PureLo/minimax-usage
 /plugin install minimax-usage@minimax-plugins
-
-# Or install directly
-/plugin install PureLo/minimax-usage
 ```
 
 ## Setup
@@ -56,10 +53,16 @@ After installation, run the automated setup:
 ```
 
 This will:
-1. Check if you have an existing statusLine configuration
-2. Prompt to overwrite if conflict detected
-3. Automatically configure `~/.claude/settings.json`
+1. Configure `${CLAUDE_CONFIG_DIR:-~/.claude}/settings.json`
+2. Install a portable status line wrapper under `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/minimax-usage/`
+3. Back up an existing status line to `statusline.backup.json` before replacing it
 4. Guide you to reload plugins
+
+To inspect an existing status line without replacing it:
+
+```
+/minimax-usage:setup --no-overwrite
+```
 
 ## StatusLine Conflict
 
@@ -72,7 +75,17 @@ Note: Pipe (`|`) does not work for combining HUD plugins because they are long-r
 
 ## Configuration
 
-The plugin automatically reads the `ANTHROPIC_AUTH_TOKEN` environment variable for authentication. No additional configuration needed if Claude Code is already configured with your MiniMax API key.
+The status line reads the `ANTHROPIC_AUTH_TOKEN` environment variable for MiniMax API authentication. Make sure this variable is exported in the environment that launches Claude Code.
+
+You can optionally create a config file at `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/minimax-usage/config.json`:
+
+```json
+{
+  "refreshIntervalMs": 60000
+}
+```
+
+The default API cache refresh interval is 60 seconds.
 
 ## API Data
 
@@ -101,8 +114,10 @@ minimax-usage/
 │   ├── config.ts          # Config loading
 │   ├── types.ts           # TypeScript interfaces
 │   └── render.ts          # Output formatting with color support
-├── commands/
-│   └── setup.sh           # Automated setup script
+├── skills/
+│   └── setup/
+│       ├── SKILL.md      # /minimax-usage:setup command
+│       └── setup.sh      # Automated setup script
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -112,6 +127,7 @@ minimax-usage/
 
 **No output displayed?**
 - Verify `ANTHROPIC_AUTH_TOKEN` environment variable is set
+- Verify Node.js 18+ or Bun is available in Claude Code's PATH
 - Check Claude Code status bar is enabled
 - Try `/reload-plugins` or restart Claude Code
 

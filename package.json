@@ -1,6 +1,6 @@
 {
   "name": "minimax-usage",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Display MiniMax token plan remaining usage in Claude Code HUD",
   "type": "module",
   "main": "dist/index.js",
@@ -8,7 +8,12 @@
     "build": "tsc",
     "dev": "tsc --watch"
   },
-  "keywords": ["minimax", "claude-code", "hud", "statusline"],
+  "keywords": [
+    "minimax",
+    "claude-code",
+    "hud",
+    "statusline"
+  ],
   "author": "PureLo",
   "license": "MIT",
   "devDependencies": {
