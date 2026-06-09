@@ -3,6 +3,7 @@
 Display MiniMax token plan remaining usage in Claude Code HUD.
 
 Shows your MiniMax API token usage limits directly in the Claude Code status bar, including:
+- **Current model** used by Claude Code
 - **5-hour interval** usage with total quota
 - **7-day weekly** usage with total quota (including boost)
 - **Color-coded** progress bars (green > 50%, yellow 20-50%, red < 20%)
@@ -10,10 +11,12 @@ Shows your MiniMax API token usage limits directly in the Claude Code status bar
 ## Output Format
 
 ```
+Model   │ MiniMax-M3
 Context │ ctx ██░░░░░░░░ 15%
 MiniMax │ 5h  █░░░░░░░░░ 3% (100%) ⟳ 3h59m │ 7d █░░░░░░░░░ 6% (150%) ⟳ 5d22h
 ```
 
+- `Model` - Current Claude Code model display name (when available)
 - `Context` - Current context window usage (when available)
 - `5h` - Five-hour usage window (base 100% quota)
 - `7d` - Seven-day weekly window (may include boost, e.g., 150%)
@@ -28,6 +31,7 @@ MiniMax │ 5h  █░░░░░░░░░ 3% (100%) ⟳ 3h59m │ 7d █░
 - **Boost support**: Accounts for quota boosts (e.g., 150% total quota)
 - **Total quota display**: Shows both used amount and total quota for each interval
 - **Reset countdown**: Shows time remaining until 5h and 7d quota reset with `⟳` symbol
+- **Model display**: Shows the active Claude Code model from status line input
 - **Context tracking**: Displays context window compression progress
 - **Minimum bar display**: Always shows at least 1 block for low usage values
 

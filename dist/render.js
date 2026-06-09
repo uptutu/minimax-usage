@@ -82,7 +82,25 @@ function getContextBar(usedPercent, width = 10) {
     const color = normalizedUsed > 80 ? RED : (normalizedUsed > 50 ? YELLOW : GREEN);
     return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
 }
+function getModelLabel(stdin) {
+    const displayName = stdin.model?.display_name?.trim();
+    if (displayName)
+        return displayName;
+    const id = stdin.model?.id?.trim();
+    return id || null;
+}
 export function render(data, stdin = {}) {
+    const modelLabel = getModelLabel(stdin);
+    // Get context usage from stdin
+    const rawContextUsed = stdin.context_window?.used_percentage ?? null;
+    const contextUsed = rawContextUsed === null ? null : clampPercent(rawContextUsed);
+    const contextBar = getContextBar(contextUsed);
+    if (modelLabel) {
+        console.log(`Model   │ ${modelLabel}`);
+    }
+    if (contextUsed !== null) {
+        console.log(`Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`);
+    }
     if (!data) {
         console.log('MiniMax ─');
         return;
@@ -94,19 +112,9 @@ export function render(data, stdin = {}) {
     // 7d weekly uses boosted total
     const weeklyUsed = calcUsedPercent(weeklyRemaining, data.weekly_boost_permille);
     const totalPercent = getTotalPercent(data.weekly_boost_permille);
-    // Get context usage from stdin
-    const rawContextUsed = stdin.context_window?.used_percentage ?? null;
-    const contextUsed = rawContextUsed === null ? null : clampPercent(rawContextUsed);
     const intervalBar = renderProgressBar(intervalUsed, intervalRemaining);
     const weeklyBar = renderProgressBar(weeklyUsed, weeklyRemaining);
-    const contextBar = getContextBar(contextUsed);
     const intervalReset = formatRemainingTime(data.end_time);
     const weeklyReset = formatRemainingTime(data.weekly_end_time);
-    if (contextUsed !== null) {
-        console.log(`Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`);
-        console.log(`MiniMax │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`);
-    }
-    else {
-        console.log(`MiniMax │ 5h ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`);
-    }
+    console.log(`MiniMax │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`);
 }

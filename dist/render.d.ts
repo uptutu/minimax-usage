@@ -1,5 +1,9 @@
 import type { TokenPlanRemain } from './types.js';
 interface StdinData {
+    model?: {
+        id?: string;
+        display_name?: string;
+    } | null;
     context_window?: {
         context_window_size?: number;
         current_usage?: {

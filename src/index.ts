@@ -3,6 +3,10 @@ import { getCached, setCached } from './cache.js';
 import { render } from './render.js';
 
 interface StdinData {
+  model?: {
+    id?: string;
+    display_name?: string;
+  } | null;
   context_window?: {
     context_window_size?: number;
     current_usage?: {

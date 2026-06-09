@@ -45,7 +45,7 @@ minimax-usage/
 |------|------|
 | `.claude-plugin/plugin.json` | 插件元数据，定义插件名称和版本 |
 | `.claude-plugin/marketplace.json` | GitHub 托管 marketplace 定义 |
-| `src/index.ts` | 状态栏入口点，读取 stdin 并输出到 stdout |
+| `src/index.ts` | 状态栏入口点，读取 stdin 中的模型、上下文信息并输出到 stdout |
 | `src/api.ts` | 调用 MiniMax `/v1/token_plan/remains` API |
 | `src/cache.ts` | 持久 TTL 缓存，避免频繁 API 调用 |
 | `src/config.ts` | 从环境变量 `ANTHROPIC_AUTH_TOKEN` 读取 API Key |
@@ -59,7 +59,7 @@ minimax-usage/
 {
   "name": "minimax-usage",
   "description": "Display MiniMax token plan remaining usage in Claude Code HUD",
-  "version": "0.0.4"
+  "version": "0.0.5"
 }
 ```
 
@@ -102,10 +102,12 @@ Authorization: Bearer <API Key>
 ## 输出格式 (详细版本)
 
 ```
+Model   │ MiniMax-M3
+Context │ ctx █░░░░░░░░░ 15%
 MiniMax │ 5h ████████░ 99% │ 7d ████████░ 96%
 ```
 
-使用进度条 + 百分比显示五小时限额和周限额。
+显示当前模型，并使用进度条 + 百分比显示上下文、五小时限额和周限额。
 
 ## 依赖
 

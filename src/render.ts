@@ -8,6 +8,10 @@ const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
 
 interface StdinData {
+  model?: {
+    id?: string;
+    display_name?: string;
+  } | null;
   context_window?: {
     context_window_size?: number;
     current_usage?: {
@@ -105,7 +109,32 @@ function getContextBar(usedPercent: number | null | undefined, width: number = 1
   return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
 }
 
+function getModelLabel(stdin: StdinData): string | null {
+  const displayName = stdin.model?.display_name?.trim();
+  if (displayName) return displayName;
+
+  const id = stdin.model?.id?.trim();
+  return id || null;
+}
+
 export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): void {
+  const modelLabel = getModelLabel(stdin);
+
+  // Get context usage from stdin
+  const rawContextUsed = stdin.context_window?.used_percentage ?? null;
+  const contextUsed = rawContextUsed === null ? null : clampPercent(rawContextUsed);
+  const contextBar = getContextBar(contextUsed);
+
+  if (modelLabel) {
+    console.log(`Model   │ ${modelLabel}`);
+  }
+
+  if (contextUsed !== null) {
+    console.log(
+      `Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`
+    );
+  }
+
   if (!data) {
     console.log('MiniMax ─');
     return;
@@ -119,27 +148,13 @@ export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): voi
   const weeklyUsed = calcUsedPercent(weeklyRemaining, data.weekly_boost_permille);
   const totalPercent = getTotalPercent(data.weekly_boost_permille);
 
-  // Get context usage from stdin
-  const rawContextUsed = stdin.context_window?.used_percentage ?? null;
-  const contextUsed = rawContextUsed === null ? null : clampPercent(rawContextUsed);
-
   const intervalBar = renderProgressBar(intervalUsed, intervalRemaining);
   const weeklyBar = renderProgressBar(weeklyUsed, weeklyRemaining);
-  const contextBar = getContextBar(contextUsed);
 
   const intervalReset = formatRemainingTime(data.end_time);
   const weeklyReset = formatRemainingTime(data.weekly_end_time);
 
-  if (contextUsed !== null) {
-    console.log(
-      `Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`
-    );
-    console.log(
-      `MiniMax │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`
-    );
-  } else {
-    console.log(
-      `MiniMax │ 5h ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`
-    );
-  }
+  console.log(
+    `MiniMax │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`
+  );
 }
