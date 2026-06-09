@@ -47,6 +47,20 @@ MiniMax │ 5h  █░░░░░░░░░ 3% (100%) ⟳ 3h59m │ 7d █░
 /plugin install PureLo/minimax-usage
 ```
 
+## Setup
+
+After installation, run the automated setup:
+
+```
+/minimax-usage:setup
+```
+
+This will:
+1. Check if you have an existing statusLine configuration
+2. Prompt to overwrite if conflict detected
+3. Automatically configure `~/.claude/settings.json`
+4. Guide you to reload plugins
+
 ## StatusLine Conflict
 
 Claude Code's `statusLine.command` only supports **one** command. If you already have another statusline plugin configured:
@@ -88,7 +102,7 @@ minimax-usage/
 │   ├── types.ts           # TypeScript interfaces
 │   └── render.ts          # Output formatting with color support
 ├── commands/
-│   └── setup.md           # Setup instructions
+│   └── setup.sh           # Automated setup script
 ├── package.json
 ├── tsconfig.json
 └── README.md
