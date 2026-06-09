@@ -6,5 +6,5 @@
   "author": {
     "name": "PureLo"
   },
-  "commands": ["bash ./commands/setup.sh"]
+  "commands": ["./commands/setup.sh"]
 }
