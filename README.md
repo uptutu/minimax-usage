@@ -49,18 +49,12 @@ MiniMax │ 5h  █░░░░░░░░░ 3% (100%) ⟳ 3h59m │ 7d █░
 
 ## StatusLine Conflict
 
-Claude Code's `statusLine.command` only supports **one** command. If you already have another statusline plugin configured, you have two options:
+Claude Code's `statusLine.command` only supports **one** command. If you already have another statusline plugin configured:
 
-**Option 1: Use pipe to combine commands**
-```bash
-# Edit ~/.claude/settings.json manually
-"statusLine": {
-  "command": "other-plugin | minimax-usage"
-}
-```
-
-**Option 2: Choose one plugin**
+**Choose one plugin**
 Replace the existing statusline with `minimax-usage` if MiniMax usage is your priority.
+
+Note: Pipe (`|`) does not work for combining HUD plugins because they are long-running commands that continuously output.
 
 ## Configuration
 
