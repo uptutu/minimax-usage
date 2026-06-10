@@ -161,7 +161,7 @@ function getProjectLabel(stdin) {
     const currentDir = getCurrentDir(stdin);
     return `${getDirectoryName(currentDir)} │ ${BROWN_YELLOW}${getGitStatusLabel(currentDir)}${RESET}`;
 }
-export function render(data, stdin = {}) {
+export function render(data, stdin = {}, isMinimax = true) {
     const modelLabel = getModelLabel(stdin);
     const projectLabel = getProjectLabel(stdin);
     // Get context usage from stdin (already resolved via stdin → usage → transcript fallback by index.ts)
@@ -174,6 +174,11 @@ export function render(data, stdin = {}) {
     console.log(`  Project │ ${projectLabel}`);
     if (contextUsed !== null) {
         console.log(`  Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`);
+    }
+    // Non-MiniMax endpoint: skip the MiniMax line entirely (no real data
+    // and no placeholder — the row is meaningless for third-party hosts).
+    if (!isMinimax) {
+        return;
     }
     if (!data) {
         console.log('  MiniMax ─');

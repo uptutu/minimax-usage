@@ -18,7 +18,9 @@ export interface ContextUsage {
  * dual-log the same API response 2-3 times in a row, but since we take the
  * LAST entry (not the sum), this is harmless.
  *
- * Returns null when the file is missing, unreadable, has no assistant
- * entries with usage yet (fresh session), or the latest usage is all zeros.
+ * Returns null when the file is missing, unreadable, or has no assistant
+ * entries with usage yet (fresh session). When a usage block is found,
+ * the resulting total — including 0 — is returned so the caller can
+ * display `0%` rather than hiding the line.
  */
 export declare function deriveContextUsage(transcriptPath: string | null | undefined): ContextUsage | null;

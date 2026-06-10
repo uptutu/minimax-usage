@@ -1,10 +1,14 @@
 import type { TokenPlanResponse, TokenPlanRemain } from './types.js';
-import { getApiKey } from './config.js';
+import { getApiKey, isMinimaxEndpoint } from './config.js';
 import * as https from 'node:https';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
 export async function fetchTokenPlan(): Promise<TokenPlanRemain | null> {
+  // Defensive gate: never hit the MiniMax billing endpoint when the
+  // session is pointed at a different host.
+  if (!isMinimaxEndpoint()) return null;
+
   const apiKey = getApiKey();
   if (!apiKey) {
     console.error('[minimax-usage] No API key found (ANTHROPIC_AUTH_TOKEN not set)');

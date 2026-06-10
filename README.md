@@ -108,6 +108,23 @@ You can optionally create a config file at `${CLAUDE_CONFIG_DIR:-~/.claude}/plug
 
 The default API cache refresh interval is 60 seconds.
 
+## Endpoint Detection
+
+The status line only renders the `MiniMax` row — and only fires the API call
+or touches the cache — when the active session is pointed at a MiniMax
+endpoint. Detection reads `ANTHROPIC_BASE_URL` and matches its hostname
+against `minimaxi.com` / `minimax.com` (case-insensitive, subdomains
+included).
+
+| `ANTHROPIC_BASE_URL` | `MiniMax` row | Network call |
+| --- | --- | --- |
+| unset or empty | hidden | skipped |
+| non-MiniMax host (e.g. `https://api.anthropic.com`) | hidden | skipped |
+| `https://www.minimaxi.com` or any `*.minimaxi.com` / `*.minimax.com` | shown | fired |
+
+Invalid URLs (e.g. `not-a-url`) are treated as non-MiniMax and the row is
+hidden — no crash, no network call.
+
 ## API Data
 
 The plugin calls MiniMax API endpoint:

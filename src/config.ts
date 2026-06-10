@@ -45,4 +45,27 @@ export function getApiKey(): string | null {
   return process.env.ANTHROPIC_AUTH_TOKEN ?? null;
 }
 
+/**
+ * Detect whether the active Claude Code session is pointed at a MiniMax
+ * endpoint. Reads `ANTHROPIC_BASE_URL` and matches its hostname against
+ * MiniMax's known domains (`minimaxi.com`, `minimax.com`).
+ *
+ * Returns `false` when the env var is unset, malformed, or points at any
+ * other host. The MiniMax HUD line should be hidden in those cases — both
+ * the network call and the rendered line are gated on this.
+ */
+export function isMinimaxEndpoint(): boolean {
+  const raw = process.env.ANTHROPIC_BASE_URL;
+  if (!raw || typeof raw !== 'string') return false;
+  try {
+    const host = new URL(raw).hostname.toLowerCase();
+    return host === 'minimaxi.com'
+      || host === 'minimax.com'
+      || host.endsWith('.minimaxi.com')
+      || host.endsWith('.minimax.com');
+  } catch {
+    return false;
+  }
+}
+
 export { getConfigDir };

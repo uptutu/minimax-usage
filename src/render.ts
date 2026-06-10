@@ -180,7 +180,7 @@ function getProjectLabel(stdin: StdinData): string {
   return `${getDirectoryName(currentDir)} │ ${BROWN_YELLOW}${getGitStatusLabel(currentDir)}${RESET}`;
 }
 
-export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): void {
+export function render(data: TokenPlanRemain | null, stdin: StdinData = {}, isMinimax: boolean = true): void {
   const modelLabel = getModelLabel(stdin);
   const projectLabel = getProjectLabel(stdin);
 
@@ -199,6 +199,12 @@ export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): voi
     console.log(
       `  Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`
     );
+  }
+
+  // Non-MiniMax endpoint: skip the MiniMax line entirely (no real data
+  // and no placeholder — the row is meaningless for third-party hosts).
+  if (!isMinimax) {
+    return;
   }
 
   if (!data) {
