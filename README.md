@@ -11,18 +11,29 @@ Shows your MiniMax API token usage limits directly in the Claude Code status bar
 ## Output Format
 
 ```
-Model   │ MiniMax-M3
-Context │ ctx ██░░░░░░░░ 15%
-MiniMax │ 5h  █░░░░░░░░░ 3% (100%) ⟳ 3h59m │ 7d █░░░░░░░░░ 6% (150%) ⟳ 5d22h
+[MiniMax-M3]
+  Context │ ctx ███░░░░░░░ 29%
+  MiniMax │ 5h  ███████░░░ 66% (100%) ⟳ 3h19m │ 7d ██░░░░░░░░ 19.5% (150%) ⟳ 4d12h
 ```
 
-- `Model` - Current Claude Code model display name (when available)
-- `Context` - Current context window usage (when available)
-- `5h` - Five-hour usage window (base 100% quota)
-- `7d` - Seven-day weekly window (may include boost, e.g., 150%)
-- Progress bar shows usage with color coding
+- `[<model>]` - Current Claude Code model display name, shown in **blue** (ANSI `\x1b[34m`) on its own line
+- `Context` - Current context window usage percentage (2-space indent, see [Context resolution](#context-resolution) below)
+- `MiniMax` - Token plan usage (2-space indent)
+  - `5h` - Five-hour usage window (base 100% quota)
+  - `7d` - Seven-day weekly window (may include boost, e.g., 150%)
+- Progress bar shows usage with color coding (green / yellow / red)
 - Percentages shown: used% (total%)
 - Reset time with `⟳` symbol (format: `XdXh` or `XhXm`)
+
+### Context resolution
+
+`Context` is resolved with a fallback chain so it's always shown when data is available:
+
+1. `stdin.context_window.used_percentage` — Claude Code's native value (most accurate)
+2. `stdin.context_window.current_usage` + `context_window_size` — computed from token counts
+3. `transcript_path` JSONL — parsed locally, taking the most recent `assistant` message's `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` divided by `context_window_size`
+
+If none of the above produce a value (e.g. brand-new session with no transcript), the line is hidden.
 
 ## Features
 
@@ -31,8 +42,8 @@ MiniMax │ 5h  █░░░░░░░░░ 3% (100%) ⟳ 3h59m │ 7d █░
 - **Boost support**: Accounts for quota boosts (e.g., 150% total quota)
 - **Total quota display**: Shows both used amount and total quota for each interval
 - **Reset countdown**: Shows time remaining until 5h and 7d quota reset with `⟳` symbol
-- **Model display**: Shows the active Claude Code model from status line input
-- **Context tracking**: Displays context window compression progress
+- **Model display**: Shows the active Claude Code model from status line input (blue brackets on its own line)
+- **Context tracking**: Displays context window compression progress with a 3-tier fallback (stdin used_percentage → stdin current_usage → transcript JSONL)
 - **Minimum bar display**: Always shows at least 1 block for low usage values
 
 ## Requirements
@@ -113,8 +124,10 @@ minimax-usage/
 │   ├── plugin.json          # Plugin manifest
 │   └── marketplace.json     # Marketplace definition
 ├── src/
-│   ├── index.ts           # Entry point
+│   ├── index.ts           # Entry point, resolves context with fallback chain
+│   ├── context.ts         # Transcript JSONL parser for context fallback
 │   ├── api.ts             # MiniMax API calls
+│   ├── cache.ts           # Result caching (TTL: 60s)
 │   ├── config.ts          # Config loading
 │   ├── types.ts           # TypeScript interfaces
 │   └── render.ts          # Output formatting with color support

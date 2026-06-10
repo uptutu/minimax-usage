@@ -2,6 +2,7 @@
 const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
 const RED = '\x1b[31m';
+const BLUE = '\x1b[34m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
 function clampPercent(value) {
@@ -91,18 +92,18 @@ function getModelLabel(stdin) {
 }
 export function render(data, stdin = {}) {
     const modelLabel = getModelLabel(stdin);
-    // Get context usage from stdin
+    // Get context usage from stdin (already resolved via stdin → usage → transcript fallback by index.ts)
     const rawContextUsed = stdin.context_window?.used_percentage ?? null;
     const contextUsed = rawContextUsed === null ? null : clampPercent(rawContextUsed);
     const contextBar = getContextBar(contextUsed);
     if (modelLabel) {
-        console.log(`Model   │ ${modelLabel}`);
+        console.log(`${BLUE}[${modelLabel}]${RESET}`);
     }
     if (contextUsed !== null) {
-        console.log(`Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`);
+        console.log(`  Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`);
     }
     if (!data) {
-        console.log('MiniMax ─');
+        console.log('  MiniMax ─');
         return;
     }
     // 5h interval uses base 100% (no boost for interval)
@@ -116,5 +117,5 @@ export function render(data, stdin = {}) {
     const weeklyBar = renderProgressBar(weeklyUsed, weeklyRemaining);
     const intervalReset = formatRemainingTime(data.end_time);
     const weeklyReset = formatRemainingTime(data.weekly_end_time);
-    console.log(`MiniMax │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`);
+    console.log(`  MiniMax │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`);
 }
