@@ -1,5 +1,7 @@
 # minimax-usage
 
+**English** | [简体中文](./README.zh.md)
+
 Display MiniMax token plan remaining usage in Claude Code HUD.
 
 Shows your MiniMax API token usage limits directly in the Claude Code status bar, including:
