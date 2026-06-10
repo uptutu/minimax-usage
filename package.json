@@ -1,6 +1,6 @@
 {
   "name": "minimax-usage",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Display MiniMax token plan remaining usage in Claude Code HUD",
   "type": "module",
   "main": "dist/index.js",

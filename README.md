@@ -4,6 +4,7 @@ Display MiniMax token plan remaining usage in Claude Code HUD.
 
 Shows your MiniMax API token usage limits directly in the Claude Code status bar, including:
 - **Current model** used by Claude Code
+- **Current project** directory name, git branch, and working tree status
 - **5-hour interval** usage with total quota
 - **7-day weekly** usage with total quota (including boost)
 - **Color-coded** progress bars (green > 50%, yellow 20-50%, red < 20%)
@@ -12,11 +13,13 @@ Shows your MiniMax API token usage limits directly in the Claude Code status bar
 
 ```
 [MiniMax-M3]
+  Project │ minimax-usage │ main ✓
   Context │ ctx ███░░░░░░░ 29%
   MiniMax │ 5h  ███████░░░ 66% (100%) ⟳ 3h19m │ 7d ██░░░░░░░░ 19.5% (150%) ⟳ 4d12h
 ```
 
 - `[<model>]` - Current Claude Code model display name, shown in **blue** (ANSI `\x1b[34m`) on its own line
+- `Project` - Current directory name plus git branch/status shown in brown-yellow (`✓` clean, `!` dirty, optional `↑N` / `↓N` ahead-behind counts; non-git directories show `no git`)
 - `Context` - Current context window usage percentage (2-space indent, see [Context resolution](#context-resolution) below)
 - `MiniMax` - Token plan usage (2-space indent)
   - `5h` - Five-hour usage window (base 100% quota)
@@ -43,6 +46,7 @@ If none of the above produce a value (e.g. brand-new session with no transcript)
 - **Total quota display**: Shows both used amount and total quota for each interval
 - **Reset countdown**: Shows time remaining until 5h and 7d quota reset with `⟳` symbol
 - **Model display**: Shows the active Claude Code model from status line input (blue brackets on its own line)
+- **Project display**: Shows current directory name plus git branch/status
 - **Context tracking**: Displays context window compression progress with a 3-tier fallback (stdin used_percentage → stdin current_usage → transcript JSONL)
 - **Minimum bar display**: Always shows at least 1 block for low usage values
 

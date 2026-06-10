@@ -31,6 +31,11 @@ export interface CachedData {
  * as optional.
  */
 export interface StdinData {
+    cwd?: string | null;
+    workspace?: {
+        current_dir?: string | null;
+        project_dir?: string | null;
+    } | null;
     model?: {
         id?: string;
         display_name?: string;

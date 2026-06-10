@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+import * as path from 'node:path';
 import type { StdinData, TokenPlanRemain } from './types.js';
 
 // ANSI color codes
@@ -5,8 +7,10 @@ const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
 const RED = '\x1b[31m';
 const BLUE = '\x1b[34m';
+const BROWN_YELLOW = '\x1b[38;5;178m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
+const GIT_TIMEOUT_MS = 1000;
 
 function clampPercent(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -100,8 +104,85 @@ function getModelLabel(stdin: StdinData): string | null {
   return id || null;
 }
 
+function runGit(cwd: string, args: string[]): string | null {
+  try {
+    return execFileSync('git', args, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: GIT_TIMEOUT_MS,
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function getCurrentDir(stdin: StdinData): string {
+  const candidates = [
+    stdin.workspace?.current_dir,
+    stdin.cwd,
+    stdin.workspace?.project_dir,
+    process.cwd(),
+  ];
+  const currentDir = candidates.find((candidate): candidate is string => {
+    return typeof candidate === 'string' && candidate.trim().length > 0;
+  });
+
+  return currentDir?.trim() || process.cwd();
+}
+
+function getDirectoryName(currentDir: string): string {
+  const resolved = path.resolve(currentDir);
+  return path.basename(resolved) || resolved;
+}
+
+function getGitBranchLabel(cwd: string): string | null {
+  const branch = runGit(cwd, ['branch', '--show-current']);
+  if (branch) return branch;
+
+  const head = runGit(cwd, ['rev-parse', '--short', 'HEAD']);
+  return head ? `detached@${head}` : null;
+}
+
+function getAheadBehindLabel(cwd: string): string {
+  const output = runGit(cwd, ['rev-list', '--left-right', '--count', 'HEAD...@{upstream}']);
+  if (!output) return '';
+
+  const [aheadRaw, behindRaw] = output.split(/\s+/);
+  const ahead = Number.parseInt(aheadRaw ?? '', 10);
+  const behind = Number.parseInt(behindRaw ?? '', 10);
+  const parts: string[] = [];
+
+  if (Number.isFinite(ahead) && ahead > 0) {
+    parts.push(`↑${ahead}`);
+  }
+  if (Number.isFinite(behind) && behind > 0) {
+    parts.push(`↓${behind}`);
+  }
+
+  return parts.length > 0 ? ` ${parts.join('')}` : '';
+}
+
+function getGitStatusLabel(cwd: string): string {
+  const isGitRepo = runGit(cwd, ['rev-parse', '--is-inside-work-tree']);
+  if (isGitRepo !== 'true') return 'no git';
+
+  const branchLabel = getGitBranchLabel(cwd);
+  if (!branchLabel) return 'no git';
+
+  const dirty = Boolean(runGit(cwd, ['status', '--porcelain']));
+  const state = dirty ? '!' : '✓';
+  return `${branchLabel} ${state}${getAheadBehindLabel(cwd)}`;
+}
+
+function getProjectLabel(stdin: StdinData): string {
+  const currentDir = getCurrentDir(stdin);
+  return `${getDirectoryName(currentDir)} │ ${BROWN_YELLOW}${getGitStatusLabel(currentDir)}${RESET}`;
+}
+
 export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): void {
   const modelLabel = getModelLabel(stdin);
+  const projectLabel = getProjectLabel(stdin);
 
   // Get context usage from stdin (already resolved via stdin → usage → transcript fallback by index.ts)
   const rawContextUsed = stdin.context_window?.used_percentage ?? null;
@@ -111,6 +192,8 @@ export function render(data: TokenPlanRemain | null, stdin: StdinData = {}): voi
   if (modelLabel) {
     console.log(`${BLUE}[${modelLabel}]${RESET}`);
   }
+
+  console.log(`  Project │ ${projectLabel}`);
 
   if (contextUsed !== null) {
     console.log(
