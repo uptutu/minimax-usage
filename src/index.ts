@@ -4,6 +4,7 @@ import { deriveContextUsage } from './context.js';
 import { renderProvider, render } from './render.js';
 import type { StdinData } from './types.js';
 import type { NormalizedUsage } from './provider/types.js';
+import { hasAnthropicBaseUrl, getAnthropicBaseUrlHost } from './config.js';
 
 async function main(): Promise<void> {
   let stdinData: StdinData = {};
@@ -18,7 +19,15 @@ async function main(): Promise<void> {
 
   const provider = selectProvider();
   if (!provider) {
-    // No recognised endpoint: render header only (no usage row).
+    // No recognised endpoint: render header only (no usage row). Log once
+    // when the user has set ANTHROPIC_BASE_URL to an unknown host so they
+    // know the HUD is intentionally silent (and not a missing-key bug).
+    if (hasAnthropicBaseUrl()) {
+      const host = getAnthropicBaseUrlHost();
+      console.error(
+        `[minimax-usage] Unrecognised ANTHROPIC_BASE_URL host "${host ?? '(unparseable)'}" — usage row hidden.`
+      );
+    }
     renderProvider(null, resolved);
     return;
   }

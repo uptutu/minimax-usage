@@ -52,6 +52,25 @@ function getEndpointHost() {
     }
 }
 /**
+ * Returns `true` when `ANTHROPIC_BASE_URL` is set to a non-empty string,
+ * regardless of whether the value parses as a URL. Used by the entry
+ * point to decide whether to log a "unrecognised host" notice when no
+ * provider matches.
+ */
+export function hasAnthropicBaseUrl() {
+    const raw = process.env.ANTHROPIC_BASE_URL;
+    return typeof raw === 'string' && raw.trim().length > 0;
+}
+/**
+ * Return the lower-cased hostname of `ANTHROPIC_BASE_URL`, or `null`
+ * when the variable is unset or fails to parse. Exported so the entry
+ * point can include the host string in the "unrecognised" log line
+ * without re-implementing the URL parse.
+ */
+export function getAnthropicBaseUrlHost() {
+    return getEndpointHost();
+}
+/**
  * Detect whether the active Claude Code session is pointed at a MiniMax
  * endpoint. Reads `ANTHROPIC_BASE_URL` and matches its hostname against
  * MiniMax's known domains (`minimaxi.com`, `minimax.com`).

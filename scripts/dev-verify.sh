@@ -33,7 +33,36 @@ unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN CLAUDE_CONFIG_DIR
 out=$(echo '{}' | node dist/index.js 2>/dev/null || true)
 echo "$out"
 echo "$out" | grep -q 'Project' || { red "  ✗ Project header missing"; exit 1; }
-echo "$out" | grep -qE 'MiniMax|Kimi|Bailian' && { red "  ✗ unexpected usage row emitted"; exit 1; } || green "  ✓ no usage row on unknown host"
+echo "$out" | grep -qE 'MiniMax|Kimi|Bailian|MiMo|Volcengine|Zhipu' && { red "  ✗ unexpected usage row emitted"; exit 1; } || green "  ✓ no usage row on unknown host"
+
+hdr "4b/6  smoke: unrecognised host → silent + explanatory log, no usage row"
+out=$(env -i HOME="$HOME" PATH="$PATH" \
+      ANTHROPIC_BASE_URL='https://api.anthropic.com' \
+      CLAUDE_CONFIG_DIR="$(mktemp -d)" \
+      node dist/index.js <<< '{}' 2>&1 || true)
+echo "$out"
+echo "$out" | grep -q 'Project' || { red "  ✗ Project header missing"; exit 1; }
+echo "$out" | grep -qE 'Unrecognised ANTHROPIC_BASE_URL' || { red "  ✗ expected unrecognised-host log line"; exit 1; }
+echo "$out" | grep -qE '5h|Minimax|Kimi|Bailian|MiMo|Volcengine|Zhipu' && { red "  ✗ usage row emitted on unrecognised host"; exit 1; } || green "  ✓ usage row hidden, log explains why"
+
+hdr "4c/6  smoke: unrecognised host without trailing slash / path → still hidden"
+out=$(env -i HOME="$HOME" PATH="$PATH" \
+      ANTHROPIC_BASE_URL='https://llm-proxy.example.com' \
+      CLAUDE_CONFIG_DIR="$(mktemp -d)" \
+      node dist/index.js <<< '{}' 2>&1 || true)
+echo "$out"
+echo "$out" | grep -q 'Project' || { red "  ✗ Project header missing"; exit 1; }
+echo "$out" | grep -qE 'Unrecognised ANTHROPIC_BASE_URL' || { red "  ✗ expected unrecognised-host log line"; exit 1; }
+echo "$out" | grep -qE '5h|MiniMax|Kimi|Bailian|MiMo|Volcengine|Zhipu' && { red "  ✗ usage row emitted on private relay host"; exit 1; } || green "  ✓ private relay host is hidden"
+
+hdr "4d/6  smoke: unrecognised host similar to known (e.g. kimi.com.evil.tld) → hidden"
+out=$(env -i HOME="$HOME" PATH="$PATH" \
+      ANTHROPIC_BASE_URL='https://kimi.com.evil.tld/coding' \
+      CLAUDE_CONFIG_DIR="$(mktemp -d)" \
+      node dist/index.js <<< '{}' 2>&1 || true)
+echo "$out"
+echo "$out" | grep -qE 'Unrecognised ANTHROPIC_BASE_URL' || { red "  ✗ expected unrecognised-host log line"; exit 1; }
+echo "$out" | grep -qE '5h|Kimi' && { red "  ✗ lookalike host bypassed Kimi detector"; exit 1; } || green "  ✓ lookalike host blocked"
 
 hdr "5/6  smoke: minimax host → provider picked, no crash, missing key path"
 out=$(env -i HOME="$HOME" PATH="$PATH" \

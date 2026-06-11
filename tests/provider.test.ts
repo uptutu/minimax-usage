@@ -15,7 +15,7 @@ delete process.env.ANTHROPIC_BASE_URL;
 delete process.env.ANTHROPIC_AUTH_TOKEN;
 delete process.env.CLAUDE_CONFIG_DIR;
 
-import { isKimiEndpoint, isMinimaxEndpoint, isBailianEndpoint, isMimoEndpoint, isVolcengineEndpoint, isZhipuEndpoint, getCredentialsDir } from '../src/config.js';
+import { isKimiEndpoint, isMinimaxEndpoint, isBailianEndpoint, isMimoEndpoint, isVolcengineEndpoint, isZhipuEndpoint, getCredentialsDir, hasAnthropicBaseUrl, getAnthropicBaseUrlHost } from '../src/config.js';
 import { pickDetail, detailToNormalized } from '../src/provider/kimi.js';
 import { selectProvider } from '../src/provider/index.js';
 import { toEpochMs } from '../src/time.js';
@@ -172,4 +172,70 @@ test('getCredentialsDir lives under the plugin config dir', () => {
   const dir = getCredentialsDir();
   assert.ok(dir.endsWith('/credentials'));
   assert.ok(dir.includes('minimax-usage'));
+});
+
+test('selectProvider returns null for unrecognised host (no usage row)', () => {
+  // Anthropic official — no usage-rest endpoint, must hide row.
+  process.env.ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
+  assert.equal(selectProvider(), null);
+  // Sanity: helper confirms a base URL is set so the entry point will log.
+  assert.equal(hasAnthropicBaseUrl(), true);
+  assert.equal(getAnthropicBaseUrlHost(), 'api.anthropic.com');
+
+  // A custom / unrecognised host (could be a private relay).
+  process.env.ANTHROPIC_BASE_URL = 'https://llm-proxy.example.com/v1';
+  assert.equal(selectProvider(), null);
+  assert.equal(hasAnthropicBaseUrl(), true);
+  assert.equal(getAnthropicBaseUrlHost(), 'llm-proxy.example.com');
+
+  // OpenAI — also unsupported, must hide row.
+  process.env.ANTHROPIC_BASE_URL = 'https://api.openai.com/v1';
+  assert.equal(selectProvider(), null);
+  assert.equal(getAnthropicBaseUrlHost(), 'api.openai.com');
+
+  delete process.env.ANTHROPIC_BASE_URL;
+});
+
+test('hasAnthropicBaseUrl is false when unset or empty', () => {
+  delete process.env.ANTHROPIC_BASE_URL;
+  assert.equal(hasAnthropicBaseUrl(), false);
+  assert.equal(getAnthropicBaseUrlHost(), null);
+
+  process.env.ANTHROPIC_BASE_URL = '   ';
+  assert.equal(hasAnthropicBaseUrl(), false);
+
+  process.env.ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
+  assert.equal(hasAnthropicBaseUrl(), true);
+  assert.equal(getAnthropicBaseUrlHost(), 'api.anthropic.com');
+
+  // Malformed URL: hasAnthropicBaseUrl is true (the variable IS set),
+  // but getAnthropicBaseUrlHost returns null so the log shows "(unparseable)".
+  process.env.ANTHROPIC_BASE_URL = 'not a url';
+  assert.equal(hasAnthropicBaseUrl(), true);
+  assert.equal(getAnthropicBaseUrlHost(), null);
+
+  delete process.env.ANTHROPIC_BASE_URL;
+});
+
+test('unrecognised host is mutually exclusive across all provider detectors', () => {
+  process.env.ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
+  assert.equal(isMinimaxEndpoint(), false);
+  assert.equal(isKimiEndpoint(), false);
+  assert.equal(isBailianEndpoint(), false);
+  assert.equal(isMimoEndpoint(), false);
+  assert.equal(isVolcengineEndpoint(), false);
+  assert.equal(isZhipuEndpoint(), false);
+  assert.equal(selectProvider(), null);
+
+  // Make sure a host *similar to* a known one (e.g. "kimi.com.evil.tld")
+  // does NOT match any provider.
+  process.env.ANTHROPIC_BASE_URL = 'https://kimi.com.evil.tld/coding';
+  assert.equal(isKimiEndpoint(), false);
+  assert.equal(selectProvider(), null);
+
+  process.env.ANTHROPIC_BASE_URL = 'https://www-minimaxi-com.evil.tld';
+  assert.equal(isMinimaxEndpoint(), false);
+  assert.equal(selectProvider(), null);
+
+  delete process.env.ANTHROPIC_BASE_URL;
 });
