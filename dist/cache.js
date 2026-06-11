@@ -23,6 +23,11 @@ function writeCacheFile(data) {
         // Cache writes should never break status line rendering.
     }
 }
+/**
+ * Generic cache lookup. The `key` should be namespaced by provider, e.g.
+ * `usage:minimax` / `usage:kimi`. Returns the cached payload only when it
+ * exists AND is still within `loadConfig().refreshIntervalMs`.
+ */
 export function getCached(key) {
     const entry = cache.get(key) ?? readCacheFile()[key];
     if (!entry)

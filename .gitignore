@@ -2,3 +2,10 @@ node_modules/
 .env
 *.log
 .DS_Store
+
+# Build outputs
+dist/
+dist-tests/
+
+# Tool state
+.omc/

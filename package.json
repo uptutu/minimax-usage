@@ -1,15 +1,18 @@
 {
   "name": "minimax-usage",
-  "version": "0.0.8",
-  "description": "Display MiniMax token plan remaining usage in Claude Code HUD",
+  "version": "0.1.0",
+  "description": "Display coding/token plan remaining usage in Claude Code HUD (MiniMax, Kimi, +stubs)",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-tests/tests/**/*.test.js'"
   },
   "keywords": [
     "minimax",
+    "kimi",
     "claude-code",
     "hud",
     "statusline"

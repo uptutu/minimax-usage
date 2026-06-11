@@ -12,4 +12,21 @@ export declare function getApiKey(): string | null;
  * the network call and the rendered line are gated on this.
  */
 export declare function isMinimaxEndpoint(): boolean;
+/** Kimi Coding Plan: api.kimi.com / *.kimi.com (accepts bare kimi.com). */
+export declare function isKimiEndpoint(): boolean;
+/** Alibaba Bailian / DashScope. */
+export declare function isBailianEndpoint(): boolean;
+/** Xiaomi MiMo. */
+export declare function isMimoEndpoint(): boolean;
+/** Volcengine ARK. */
+export declare function isVolcengineEndpoint(): boolean;
+/** Zhipu BigModel (open.bigmodel.cn). */
+export declare function isZhipuEndpoint(): boolean;
+/**
+ * Credential directory: ${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/minimax-usage/credentials
+ *
+ * Kept separate from the cache file so users can back up / wipe credentials
+ * without touching the usage cache (and vice versa).
+ */
+export declare function getCredentialsDir(): string;
 export { getConfigDir };

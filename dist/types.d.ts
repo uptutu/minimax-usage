@@ -1,27 +1,8 @@
-export interface TokenPlanRemain {
-    model_name: string;
-    current_interval_total_count: number;
-    current_interval_usage_count: number;
-    current_interval_remaining_percent: number;
-    current_weekly_total_count: number;
-    current_weekly_usage_count: number;
-    current_weekly_remaining_percent: number;
-    weekly_boost_permille: number;
-    end_time: number;
-    weekly_end_time: number;
-}
-export interface TokenPlanResponse {
-    model_remains: TokenPlanRemain[];
-    base_resp: {
-        status_code: number;
-        status_msg: string;
-    };
-}
 export interface MiniMaxConfig {
     refreshIntervalMs: number;
 }
-export interface CachedData {
-    data: TokenPlanRemain | null;
+export interface CachedData<T> {
+    data: T | null;
     timestamp: number;
 }
 /**

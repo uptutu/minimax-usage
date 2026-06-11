@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
-import type { StdinData, TokenPlanRemain } from './types.js';
+import type { StdinData } from './types.js';
+import type { NormalizedUsage } from './provider/types.js';
 
 // ANSI color codes
 const GREEN = '\x1b[32m';
@@ -180,11 +181,18 @@ function getProjectLabel(stdin: StdinData): string {
   return `${getDirectoryName(currentDir)} │ ${BROWN_YELLOW}${getGitStatusLabel(currentDir)}${RESET}`;
 }
 
-export function render(data: TokenPlanRemain | null, stdin: StdinData = {}, isMinimax: boolean = true): void {
+/**
+ * Render the HUD for an arbitrary provider using the normalised payload.
+ * Headers (model / project / context) are provider-agnostic; the usage
+ * line is suppressed entirely when `data` is null (i.e. fetch failed
+ * or returned no rows). When the provider only exposes a single window
+ * (Kimi), the `7d` column collapses to a "─" placeholder so the layout
+ * stays recognisable.
+ */
+export function renderProvider(data: NormalizedUsage | null, stdin: StdinData = {}): void {
   const modelLabel = getModelLabel(stdin);
   const projectLabel = getProjectLabel(stdin);
 
-  // Get context usage from stdin (already resolved via stdin → usage → transcript fallback by index.ts)
   const rawContextUsed = stdin.context_window?.used_percentage ?? null;
   const contextUsed = rawContextUsed === null ? null : clampPercent(rawContextUsed);
   const contextBar = getContextBar(contextUsed);
@@ -201,32 +209,93 @@ export function render(data: TokenPlanRemain | null, stdin: StdinData = {}, isMi
     );
   }
 
-  // Non-MiniMax endpoint: skip the MiniMax line entirely (no real data
-  // and no placeholder — the row is meaningless for third-party hosts).
-  if (!isMinimax) {
+  if (!data) return;
+
+  const label = data.providerId === 'minimax' ? 'MiniMax'
+    : data.providerId === 'kimi' ? 'Kimi'
+      : data.providerId === 'bailian' ? 'Bailian'
+        : data.providerId === 'mimo' ? 'MiMo'
+          : data.providerId === 'volcengine' ? 'Volcengine'
+            : 'Zhipu';
+
+  const hasInterval = data.intervalRemainingPercent !== null;
+  const hasWeekly = data.weeklyRemainingPercent !== null;
+
+  if (!hasInterval && !hasWeekly) {
+    console.log(`  ${label} ─`);
     return;
   }
 
-  if (!data) {
-    console.log('  MiniMax ─');
+  if (hasInterval && !hasWeekly) {
+    const intervalRemaining = clampPercent(data.intervalRemainingPercent ?? 0);
+    const intervalUsed = 100 - intervalRemaining;
+    const intervalBar = renderProgressBar(intervalUsed, intervalRemaining);
+    const intervalReset = formatRemainingTime(data.intervalResetMs ?? undefined);
+    const resetStr = intervalReset ? ` ${intervalReset}` : '';
+    console.log(`  ${label} │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%)${resetStr}`);
     return;
   }
 
-  // 5h interval uses base 100% (no boost for interval)
-  const intervalRemaining = clampPercent(data.current_interval_remaining_percent);
-  const weeklyRemaining = clampPercent(data.current_weekly_remaining_percent);
+  // 5h + 7d layout (MiniMax-shaped). When the provider only knows 7d
+  // we render an empty 5h column so the 7d progress bar still shows.
+  if (!hasInterval) {
+    const weeklyRemaining = clampPercent(data.weeklyRemainingPercent ?? 0);
+    const weeklyUsed = calcUsedPercent(weeklyRemaining, data.weeklyBoostPermille);
+    const totalPercent = getTotalPercent(data.weeklyBoostPermille);
+    const weeklyBar = renderProgressBar(weeklyUsed, weeklyRemaining);
+    const weeklyReset = formatRemainingTime(data.weeklyResetMs ?? undefined);
+    const empty5hBar = `${DIM}${'░'.repeat(10)}${RESET}`;
+    const resetStr = weeklyReset ? ` ${weeklyReset}` : '';
+    console.log(
+      `  ${label} │ 5h  ${empty5hBar} ─ (100%) │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%)${resetStr}`
+    );
+    return;
+  }
+
+  const intervalRemaining = clampPercent(data.intervalRemainingPercent ?? 0);
+  const weeklyRemaining = clampPercent(data.weeklyRemainingPercent ?? 0);
   const intervalUsed = 100 - intervalRemaining;
-  // 7d weekly uses boosted total
-  const weeklyUsed = calcUsedPercent(weeklyRemaining, data.weekly_boost_permille);
-  const totalPercent = getTotalPercent(data.weekly_boost_permille);
+  const weeklyUsed = calcUsedPercent(weeklyRemaining, data.weeklyBoostPermille);
+  const totalPercent = getTotalPercent(data.weeklyBoostPermille);
 
   const intervalBar = renderProgressBar(intervalUsed, intervalRemaining);
   const weeklyBar = renderProgressBar(weeklyUsed, weeklyRemaining);
 
-  const intervalReset = formatRemainingTime(data.end_time);
-  const weeklyReset = formatRemainingTime(data.weekly_end_time);
+  const intervalReset = formatRemainingTime(data.intervalResetMs ?? undefined);
+  const weeklyReset = formatRemainingTime(data.weeklyResetMs ?? undefined);
 
   console.log(
-    `  MiniMax │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`
+    `  ${label} │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`
   );
+}
+
+/**
+ * Backward-compat shim for callers that still pass the legacy
+ * `TokenPlanRemain` payload. New code should call `renderProvider()` with a
+ * `NormalizedUsage` instead. When `isMinimax` is false the line is
+ * suppressed entirely.
+ */
+export function render(
+  data: { current_interval_remaining_percent: number; current_weekly_remaining_percent: number; weekly_boost_permille: number; end_time: number; weekly_end_time: number } | null,
+  stdin: StdinData = {},
+  isMinimax: boolean = true
+): void {
+  if (!isMinimax) {
+    // Keep header rendering consistent with the provider path.
+    renderProvider(null, stdin);
+    return;
+  }
+  if (!data) {
+    renderProvider(null, stdin);
+    return;
+  }
+  const toMs = (t: number): number => t < 1_000_000_000_000 ? t * 1000 : t;
+  renderProvider({
+    intervalRemainingPercent: data.current_interval_remaining_percent,
+    intervalResetMs: toMs(data.end_time),
+    weeklyRemainingPercent: data.current_weekly_remaining_percent,
+    weeklyResetMs: toMs(data.weekly_end_time),
+    weeklyBoostPermille: data.weekly_boost_permille,
+    providerId: 'minimax',
+  }, stdin);
 }

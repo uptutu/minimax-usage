@@ -1,24 +1,24 @@
-import type { CachedData, TokenPlanRemain } from './types.js';
+import type { CachedData } from './types.js';
 import { getConfigDir, loadConfig } from './config.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-const cache = new Map<string, CachedData>();
+const cache = new Map<string, CachedData<unknown>>();
 
 function getCachePath(): string {
   return path.join(getConfigDir(), 'cache.json');
 }
 
-function readCacheFile(): Record<string, CachedData> {
+function readCacheFile(): Record<string, CachedData<unknown>> {
   try {
     const content = fs.readFileSync(getCachePath(), 'utf-8');
-    return JSON.parse(content) as Record<string, CachedData>;
+    return JSON.parse(content) as Record<string, CachedData<unknown>>;
   } catch {
     return {};
   }
 }
 
-function writeCacheFile(data: Record<string, CachedData>): void {
+function writeCacheFile(data: Record<string, CachedData<unknown>>): void {
   try {
     fs.mkdirSync(getConfigDir(), { recursive: true });
     fs.writeFileSync(getCachePath(), JSON.stringify(data, null, 2));
@@ -27,7 +27,12 @@ function writeCacheFile(data: Record<string, CachedData>): void {
   }
 }
 
-export function getCached(key: string): TokenPlanRemain | null {
+/**
+ * Generic cache lookup. The `key` should be namespaced by provider, e.g.
+ * `usage:minimax` / `usage:kimi`. Returns the cached payload only when it
+ * exists AND is still within `loadConfig().refreshIntervalMs`.
+ */
+export function getCached<T>(key: string): T | null {
   const entry = cache.get(key) ?? readCacheFile()[key];
   if (!entry) return null;
 
@@ -37,10 +42,10 @@ export function getCached(key: string): TokenPlanRemain | null {
     return null;
   }
 
-  return entry.data;
+  return entry.data as T;
 }
 
-export function setCached(key: string, data: TokenPlanRemain | null): void {
+export function setCached<T>(key: string, data: T | null): void {
   const cacheFile = readCacheFile();
 
   if (!data) {
@@ -50,12 +55,12 @@ export function setCached(key: string, data: TokenPlanRemain | null): void {
     return;
   }
 
-  const entry = {
+  const entry: CachedData<T> = {
     data,
     timestamp: Date.now(),
   };
 
   cache.set(key, entry);
-  cacheFile[key] = entry;
+  cacheFile[key] = entry as CachedData<unknown>;
   writeCacheFile(cacheFile);
 }

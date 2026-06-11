@@ -1,47 +1,43 @@
-import { fetchTokenPlan } from './api.js';
+import { selectProvider } from './provider/index.js';
 import { getCached, setCached } from './cache.js';
-import { isMinimaxEndpoint } from './config.js';
 import { deriveContextUsage } from './context.js';
-import { render } from './render.js';
+import { renderProvider, render } from './render.js';
 import type { StdinData } from './types.js';
-
-const CACHE_KEY = 'token-plan';
+import type { NormalizedUsage } from './provider/types.js';
 
 async function main(): Promise<void> {
-  // Read stdin from Claude Code
   let stdinData: StdinData = {};
   try {
     const stdin = await readStdin();
-    if (stdin) {
-      stdinData = JSON.parse(stdin) as StdinData;
-    }
+    if (stdin) stdinData = JSON.parse(stdin) as StdinData;
   } catch {
-    // Ignore stdin errors
+    // Ignore stdin errors — fallback headers are still safe to render.
   }
 
   const resolved = resolveContextUsage(stdinData);
 
-  // Only fetch and cache the MiniMax quota when the active session is
-  // actually pointed at a MiniMax endpoint. For third-party hosts, skip
-  // the network call and cache I/O entirely — the HUD will simply not
-  // render the MiniMax line.
-  const isMinimax = isMinimaxEndpoint();
-  let data: Awaited<ReturnType<typeof fetchTokenPlan>> = null;
-
-  if (isMinimax) {
-    const cached = getCached(CACHE_KEY);
-    if (cached) {
-      render(cached, resolved, isMinimax);
-      return;
-    }
-
-    data = await fetchTokenPlan();
-    if (data) {
-      setCached(CACHE_KEY, data);
-    }
+  const provider = selectProvider();
+  if (!provider) {
+    // No recognised endpoint: render header only (no usage row).
+    renderProvider(null, resolved);
+    return;
   }
 
-  render(data, resolved, isMinimax);
+  const cacheKey = `usage:${provider.id}`;
+  const cached = getCached<NormalizedUsage>(cacheKey);
+  if (cached) {
+    renderProvider(cached, resolved);
+    return;
+  }
+
+  let data: NormalizedUsage | null = null;
+  try {
+    data = await provider.fetch();
+  } catch (e) {
+    console.error(`[minimax-usage] ${provider.id} fetch threw:`, (e as Error).message);
+  }
+  if (data) setCached(cacheKey, data);
+  renderProvider(data, resolved);
 }
 
 /**
@@ -82,17 +78,8 @@ function resolveContextUsage(stdinData: StdinData): StdinData {
   if (usedPct === null) {
     const transcriptPath = stdinData.transcript_path ?? null;
     if (transcriptPath) {
-      // Fall back to a sensible default window size when `context_window`
-      // is missing from stdin (some Claude Code versions / first-turn
-      // states omit it). 200k is the most common Sonnet/Opus window;
-      // models with larger windows will still report via path 1 above.
       const windowSize = cw?.context_window_size ?? 200_000;
       if (windowSize > 0) {
-        // transcript may exist but contain no usage yet (fresh session,
-        // or a session whose prior turns were all tool/error events).
-        // Treat "no usage block found" as 0 tokens rather than hiding
-        // the line — a 0% reading is strictly more informative than
-        // nothing.
         const usage = deriveContextUsage(transcriptPath);
         const totalTokens = usage?.totalTokens ?? 0;
         usedPct = (totalTokens / windowSize) * 100;
@@ -118,5 +105,8 @@ function readStdin(): Promise<string> {
   });
 }
 
-// Run main function
+// Re-export the legacy `render` so any external consumer that still imports
+// it from `./index.js` keeps working.
+export { render };
+
 void main();

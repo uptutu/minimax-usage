@@ -1,12 +1,37 @@
-import type { TokenPlanResponse, TokenPlanRemain } from './types.js';
-import { getApiKey, isMinimaxEndpoint } from './config.js';
+import type { Provider, NormalizedUsage } from './types.js';
+import { isMinimaxEndpoint, getApiKey } from '../config.js';
+import { toEpochMs } from '../time.js';
 import * as https from 'node:https';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
-export async function fetchTokenPlan(): Promise<TokenPlanRemain | null> {
-  // Defensive gate: never hit the MiniMax billing endpoint when the
-  // session is pointed at a different host.
+interface MiniMaxRemain {
+  model_name: string;
+  current_interval_total_count: number;
+  current_interval_usage_count: number;
+  current_interval_remaining_percent: number;
+  current_weekly_total_count: number;
+  current_weekly_usage_count: number;
+  current_weekly_remaining_percent: number;
+  weekly_boost_permille: number;
+  end_time: number;
+  weekly_end_time: number;
+}
+
+interface MiniMaxResponse {
+  model_remains: MiniMaxRemain[];
+  base_resp: {
+    status_code: number;
+    status_msg: string;
+  };
+}
+
+/**
+ * Fetch and normalise the active session's MiniMax token-plan usage.
+ * Returns `null` for any failure mode (wrong host, missing key, network,
+ * non-zero status, JSON parse error).
+ */
+async function fetchMinimaxUsage(): Promise<NormalizedUsage | null> {
   if (!isMinimaxEndpoint()) return null;
 
   const apiKey = getApiKey();
@@ -15,9 +40,9 @@ export async function fetchTokenPlan(): Promise<TokenPlanRemain | null> {
     return null;
   }
 
-  return new Promise((resolve) => {
+  const remain = await new Promise<MiniMaxRemain | null>((resolve) => {
     let settled = false;
-    const finish = (value: TokenPlanRemain | null): void => {
+    const finish = (value: MiniMaxRemain | null): void => {
       if (settled) return;
       settled = true;
       resolve(value);
@@ -44,7 +69,7 @@ export async function fetchTokenPlan(): Promise<TokenPlanRemain | null> {
         }
 
         try {
-          const json = JSON.parse(data) as TokenPlanResponse;
+          const json = JSON.parse(data) as MiniMaxResponse;
           if (json.base_resp?.status_code !== 0) {
             console.error(`[minimax-usage] API error: ${json.base_resp?.status_msg}`);
             finish(null);
@@ -71,4 +96,22 @@ export async function fetchTokenPlan(): Promise<TokenPlanRemain | null> {
 
     req.end();
   });
+
+  if (!remain) return null;
+
+  return {
+    intervalRemainingPercent: remain.current_interval_remaining_percent,
+    intervalResetMs: toEpochMs(remain.end_time),
+    weeklyRemainingPercent: remain.current_weekly_remaining_percent,
+    weeklyResetMs: toEpochMs(remain.weekly_end_time),
+    weeklyBoostPermille: remain.weekly_boost_permille,
+    providerId: 'minimax',
+  };
 }
+
+export const minimaxProvider: Provider = {
+  id: 'minimax',
+  displayName: 'MiniMax',
+  matches: isMinimaxEndpoint,
+  fetch: fetchMinimaxUsage,
+};

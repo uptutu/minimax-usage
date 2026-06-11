@@ -37,6 +37,21 @@ export function getApiKey() {
     return process.env.ANTHROPIC_AUTH_TOKEN ?? null;
 }
 /**
+ * Parse and lower-case the hostname of `ANTHROPIC_BASE_URL`. Returns
+ * `null` when the variable is unset/malformed so callers can short-circuit.
+ */
+function getEndpointHost() {
+    const raw = process.env.ANTHROPIC_BASE_URL;
+    if (!raw || typeof raw !== 'string')
+        return null;
+    try {
+        return new URL(raw).hostname.toLowerCase();
+    }
+    catch {
+        return null;
+    }
+}
+/**
  * Detect whether the active Claude Code session is pointed at a MiniMax
  * endpoint. Reads `ANTHROPIC_BASE_URL` and matches its hostname against
  * MiniMax's known domains (`minimaxi.com`, `minimax.com`).
@@ -46,18 +61,61 @@ export function getApiKey() {
  * the network call and the rendered line are gated on this.
  */
 export function isMinimaxEndpoint() {
-    const raw = process.env.ANTHROPIC_BASE_URL;
-    if (!raw || typeof raw !== 'string')
+    const host = getEndpointHost();
+    if (!host)
         return false;
-    try {
-        const host = new URL(raw).hostname.toLowerCase();
-        return host === 'minimaxi.com'
-            || host === 'minimax.com'
-            || host.endsWith('.minimaxi.com')
-            || host.endsWith('.minimax.com');
-    }
-    catch {
+    return host === 'minimaxi.com'
+        || host === 'minimax.com'
+        || host.endsWith('.minimaxi.com')
+        || host.endsWith('.minimax.com');
+}
+/** Kimi Coding Plan: api.kimi.com / *.kimi.com (accepts bare kimi.com). */
+export function isKimiEndpoint() {
+    const host = getEndpointHost();
+    if (!host)
         return false;
-    }
+    return host === 'kimi.com' || host.endsWith('.kimi.com');
+}
+/** Alibaba Bailian / DashScope. */
+export function isBailianEndpoint() {
+    const host = getEndpointHost();
+    if (!host)
+        return false;
+    return host === 'dashscope.aliyuncs.com'
+        || host.endsWith('.dashscope.aliyuncs.com');
+}
+/** Xiaomi MiMo. */
+export function isMimoEndpoint() {
+    const host = getEndpointHost();
+    if (!host)
+        return false;
+    return host === 'api.xiaomimimo.com'
+        || host.endsWith('.xiaomimimo.com');
+}
+/** Volcengine ARK. */
+export function isVolcengineEndpoint() {
+    const host = getEndpointHost();
+    if (!host)
+        return false;
+    return host === 'ark.cn-beijing.volces.com'
+        || host.endsWith('.volces.com');
+}
+/** Zhipu BigModel (open.bigmodel.cn). */
+export function isZhipuEndpoint() {
+    const host = getEndpointHost();
+    if (!host)
+        return false;
+    return host === 'bigmodel.cn'
+        || host === 'open.bigmodel.cn'
+        || host.endsWith('.bigmodel.cn');
+}
+/**
+ * Credential directory: ${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/minimax-usage/credentials
+ *
+ * Kept separate from the cache file so users can back up / wipe credentials
+ * without touching the usage cache (and vice versa).
+ */
+export function getCredentialsDir() {
+    return path.join(getConfigDir(), 'credentials');
 }
 export { getConfigDir };
