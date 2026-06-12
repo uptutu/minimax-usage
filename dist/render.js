@@ -74,9 +74,79 @@ function renderProgressBar(usedPercent, remainingPercent, width = 10) {
         : Math.min(normalizedWidth, Math.max(1, Math.round((normalizedUsed / 100) * normalizedWidth)));
     const remainingBlocks = normalizedWidth - usedBlocks;
     const color = getColor(remainingPercent);
-    return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
+    // T-002: 用量 anchor (│). Disabled via HUD_LEGACY=1 for users on the old visual.
+    // Anchor encodes "where on the bar the current usage sits" — its value is
+    // redundant with the percentage for sighted users, but it gives a second
+    // (non-color) channel that survives NO_COLOR=1 and is invariant to color
+    // blindness. See docs/TODO.md#t-002 for the full design.
+    if (process.env.HUD_LEGACY === '1') {
+        return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
+    }
+    const anchorPos = Math.min(normalizedWidth - 1, usedBlocks);
+    const before = '█'.repeat(anchorPos);
+    const after = '░'.repeat(normalizedWidth - anchorPos - 1);
+    return `${color}${before}${RESET}│${DIM}${after}${RESET}`;
 }
-function getContextBar(usedPercent, width = 10) {
+/**
+ * T-004: 时间进度行(第二行)。编码"当前在窗口的哪个时间点",
+ * 与 T-002 的 `│` 用量 anchor 对位形成节奏对比。
+ *
+ * 字符:`━ ● ─`,宽度 16(比用量 bar 宽,因不承载数字,纯位置感)。
+ *
+ * 降级:
+ *   - windowStartMs/windowEndMs 缺失 → `─...─ elapsed: ?`
+ *   - HUD_LEGACY_TIME=1 → 返回空字符串(关闭第二行)
+ *   - 终端不支持 `━` → fallback 到 `-`(未来可探测)
+ */
+export function renderTimeProgress(windowStartMs, windowEndMs, width = 10) {
+    if (process.env.HUD_LEGACY_TIME === '1')
+        return '';
+    if (windowStartMs == null || windowEndMs == null) {
+        return '─'.repeat(width) + ' elapsed: ?';
+    }
+    const now = Date.now();
+    if (now < windowStartMs) {
+        return '─'.repeat(width) + ' 0% elapsed';
+    }
+    const elapsed = Math.max(0, Math.min(1, (now - windowStartMs) / (windowEndMs - windowStartMs)));
+    const anchorPos = Math.min(width - 1, Math.max(0, Math.round(elapsed * width)));
+    return '─'.repeat(anchorPos) + '●' + '─'.repeat(width - anchorPos - 1)
+        + ` ${Math.round(elapsed * 100)}% elapsed`;
+}
+/**
+ * Sum all token fields from stdin.current_usage to get a single
+ * "tokens consumed in this context window" figure. Returns null if
+ * any field is missing — we don't guess across providers.
+ */
+export function sumContextTokens(cu) {
+    if (!cu || typeof cu !== 'object')
+        return null;
+    const fields = ['input_tokens', 'output_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens'];
+    let total = 0;
+    for (const f of fields) {
+        const v = cu[f];
+        if (typeof v !== 'number' || !Number.isFinite(v))
+            return null;
+        total += v;
+    }
+    return total;
+}
+/**
+ * Compact human-readable token count: 1234 → "1.2K", 1_500_000 → "1.5M".
+ * Returns "?" for non-finite input.
+ */
+export function formatTokenCount(n) {
+    if (n === null || n === undefined || !Number.isFinite(n))
+        return '?';
+    if (n < 1000)
+        return String(Math.round(n));
+    if (n < 1_000_000)
+        return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}K`;
+    if (n < 1_000_000_000)
+        return `${(n / 1_000_000).toFixed(n < 10_000_000 ? 1 : 0)}M`;
+    return `${(n / 1_000_000_000).toFixed(n < 10_000_000_000 ? 1 : 0)}B`;
+}
+function getContextBar(usedPercent, width = 10, usedTokens = null, totalTokens = null) {
     if (usedPercent === null || usedPercent === undefined) {
         return `${DIM}${'░'.repeat(width)}${RESET}`;
     }
@@ -85,7 +155,11 @@ function getContextBar(usedPercent, width = 10) {
     const usedBlocks = Math.min(normalizedWidth, Math.round((normalizedUsed / 100) * normalizedWidth));
     const remainingBlocks = normalizedWidth - usedBlocks;
     const color = normalizedUsed > 80 ? RED : (normalizedUsed > 50 ? YELLOW : GREEN);
-    return `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
+    const bar = `${color}${'█'.repeat(usedBlocks)}${DIM}${'░'.repeat(remainingBlocks)}${RESET}`;
+    if (usedTokens === null || totalTokens === null) {
+        return `${bar} ${formatPercent(usedPercent)}%`;
+    }
+    return `${bar} ${formatTokenCount(usedTokens)}/${formatTokenCount(totalTokens)} (${formatPercent(usedPercent)}%)`;
 }
 function getModelLabel(stdin) {
     const displayName = stdin.model?.display_name?.trim();
@@ -174,13 +248,15 @@ export function renderProvider(data, stdin = {}) {
     const projectLabel = getProjectLabel(stdin);
     const rawContextUsed = stdin.context_window?.used_percentage ?? null;
     const contextUsed = rawContextUsed === null ? null : clampPercent(rawContextUsed);
-    const contextBar = getContextBar(contextUsed);
+    const usedTokens = sumContextTokens(stdin.context_window?.current_usage);
+    const totalTokens = stdin.context_window?.context_window_size ?? null;
+    const contextBar = getContextBar(contextUsed, 10, usedTokens, totalTokens);
     if (modelLabel) {
         console.log(`${BLUE}[${modelLabel}]${RESET}`);
     }
     console.log(`  Project │ ${projectLabel}`);
     if (contextUsed !== null) {
-        console.log(`  Context │ ctx ${contextBar} ${formatPercent(contextUsed)}%`);
+        console.log(`  Context │ ctx ${contextBar}`);
     }
     if (!data)
         return;
@@ -203,6 +279,9 @@ export function renderProvider(data, stdin = {}) {
         const intervalReset = formatRemainingTime(data.intervalResetMs ?? undefined);
         const resetStr = intervalReset ? ` ${intervalReset}` : '';
         console.log(`  ${label} │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%)${resetStr}`);
+        const intervalTime = renderTimeProgress(data.intervalWindowStartMs, data.intervalResetMs);
+        if (intervalTime)
+            console.log(`  ${label} │ 5h  ${intervalTime}`);
         return;
     }
     // 5h + 7d layout (MiniMax-shaped). When the provider only knows 7d
@@ -215,7 +294,8 @@ export function renderProvider(data, stdin = {}) {
         const weeklyReset = formatRemainingTime(data.weeklyResetMs ?? undefined);
         const empty5hBar = `${DIM}${'░'.repeat(10)}${RESET}`;
         const resetStr = weeklyReset ? ` ${weeklyReset}` : '';
-        console.log(`  ${label} │ 5h  ${empty5hBar} ─ (100%) │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%)${resetStr}`);
+        const weeklyTimeOnly = renderTimeProgress(data.weeklyWindowStartMs, data.weeklyResetMs);
+        console.log(`  ${label} │ 5h  ${empty5hBar} ─ (100%) │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%)${resetStr}${weeklyTimeOnly ? ' ' + weeklyTimeOnly : ''}`);
         return;
     }
     const intervalRemaining = clampPercent(data.intervalRemainingPercent ?? 0);
@@ -227,7 +307,12 @@ export function renderProvider(data, stdin = {}) {
     const weeklyBar = renderProgressBar(weeklyUsed, weeklyRemaining);
     const intervalReset = formatRemainingTime(data.intervalResetMs ?? undefined);
     const weeklyReset = formatRemainingTime(data.weeklyResetMs ?? undefined);
+    // 7d 时间行已取消(用户偏好:只看用量 + 倒计时);5h 时间仍独立成行
     console.log(`  ${label} │ 5h  ${intervalBar} ${formatPercent(intervalUsed)}% (100%) ${intervalReset} │ 7d ${weeklyBar} ${formatPercent(weeklyUsed)}% (${formatPercent(totalPercent)}%) ${weeklyReset}`);
+    // T-004: 第二行 — 5h 时间进度
+    const intervalTime = renderTimeProgress(data.intervalWindowStartMs, data.intervalResetMs);
+    if (intervalTime)
+        console.log(`  ${label} │ 5h  ${intervalTime}`);
 }
 /**
  * Backward-compat shim for callers that still pass the legacy
@@ -246,11 +331,17 @@ export function render(data, stdin = {}, isMinimax = true) {
         return;
     }
     const toMs = (t) => t < 1_000_000_000_000 ? t * 1000 : t;
+    const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const intervalEnd = toMs(data.end_time);
+    const weeklyEnd = toMs(data.weekly_end_time);
     renderProvider({
         intervalRemainingPercent: data.current_interval_remaining_percent,
-        intervalResetMs: toMs(data.end_time),
+        intervalResetMs: intervalEnd,
+        intervalWindowStartMs: intervalEnd - FIVE_HOURS_MS,
         weeklyRemainingPercent: data.current_weekly_remaining_percent,
-        weeklyResetMs: toMs(data.weekly_end_time),
+        weeklyResetMs: weeklyEnd,
+        weeklyWindowStartMs: weeklyEnd - SEVEN_DAYS_MS,
         weeklyBoostPermille: data.weekly_boost_permille,
         providerId: 'minimax',
     }, stdin);

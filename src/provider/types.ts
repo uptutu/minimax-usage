@@ -17,6 +17,10 @@ export interface NormalizedUsage {
   weeklyRemainingPercent: number | null;
   /** 7d 周窗口结束时间(epoch ms);null = 不可知 */
   weeklyResetMs: number | null;
+  /** 5h 窗口开始时间(epoch ms);null = 不可知(用于 T-004 时间进度行) */
+  intervalWindowStartMs: number | null;
+  /** 7d 窗口开始时间(epoch ms);null = 不可知(用于 T-004 时间进度行) */
+  weeklyWindowStartMs: number | null;
   /** 套餐 boost 系数(‰,MiniMax 用);Kimi 传 1000 */
   weeklyBoostPermille: number;
   /** 原始 provider 标识(用于 debug 日志) */

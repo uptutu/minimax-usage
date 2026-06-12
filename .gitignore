@@ -9,3 +9,17 @@ dist-tests/
 
 # Tool state
 .omc/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+
+# Auto-injected by bd init (do not commit)
+.beads/
+.agents/
+.codex/
+AGENTS.md
+CLAUDE.md
+.claude/

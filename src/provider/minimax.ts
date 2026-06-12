@@ -99,11 +99,19 @@ async function fetchMinimaxUsage(): Promise<NormalizedUsage | null> {
 
   if (!remain) return null;
 
+  // T-004: MiniMax API 不返回 start_time,5h/7d 固定时长,end - duration 推 start
+  const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+  const intervalEnd = toEpochMs(remain.end_time);
+  const weeklyEnd = toEpochMs(remain.weekly_end_time);
+
   return {
     intervalRemainingPercent: remain.current_interval_remaining_percent,
-    intervalResetMs: toEpochMs(remain.end_time),
+    intervalResetMs: intervalEnd,
+    intervalWindowStartMs: intervalEnd !== null ? intervalEnd - FIVE_HOURS_MS : null,
     weeklyRemainingPercent: remain.current_weekly_remaining_percent,
-    weeklyResetMs: toEpochMs(remain.weekly_end_time),
+    weeklyResetMs: weeklyEnd,
+    weeklyWindowStartMs: weeklyEnd !== null ? weeklyEnd - SEVEN_DAYS_MS : null,
     weeklyBoostPermille: remain.weekly_boost_permille,
     providerId: 'minimax',
   };

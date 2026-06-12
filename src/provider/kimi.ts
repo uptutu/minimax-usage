@@ -56,11 +56,18 @@ export function detailToNormalized(
     ? Math.max(0, Math.min(100, (remaining / limit) * 100))
     : null;
 
+  // T-004: Kimi 5h 固定窗口,从 resetTime 推 start
+  const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+  const intervalEnd = toEpochMs(detail.resetTime);
+  const intervalStart = intervalEnd !== null ? intervalEnd - FIVE_HOURS_MS : null;
+
   return {
     intervalRemainingPercent,
-    intervalResetMs: toEpochMs(detail.resetTime),
+    intervalResetMs: intervalEnd,
+    intervalWindowStartMs: intervalStart,
     weeklyRemainingPercent: null,
     weeklyResetMs: null,
+    weeklyWindowStartMs: null,
     weeklyBoostPermille: 1000,
     providerId,
   };
