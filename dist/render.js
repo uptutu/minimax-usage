@@ -43,7 +43,10 @@ function getTotalPercent(boostPermille) {
         : 1000;
     return normalizedBoost / 10;
 }
-// Format remaining time
+// Format remaining time. Under 5 minutes we surface seconds too —
+// the statusline only re-renders between prompts, so a minute-granularity
+// `Math.floor` value (e.g. `⟳ 2m` for the full 60-179s window) reads as
+// "frozen" to the user. Adding `30s` tick on every statusline update.
 function formatRemainingTime(endTimeMs) {
     if (!endTimeMs || !Number.isFinite(endTimeMs))
         return '';
@@ -58,11 +61,17 @@ function formatRemainingTime(endTimeMs) {
     const days = Math.floor(totalMinutes / 1440);
     const hours = Math.floor((totalMinutes % 1440) / 60);
     const minutes = totalMinutes % 60;
+    const seconds = Math.floor((remaining % 60000) / 1000);
     if (days > 0) {
         return `⟳ ${days}d${hours}h`;
     }
     if (hours > 0) {
         return `⟳ ${hours}h${minutes}m`;
+    }
+    // Under 5 minutes: include seconds so the value ticks on every re-render
+    // (statusline only re-fires between prompts, not on a clock).
+    if (minutes < 5) {
+        return `⟳ ${minutes}m${seconds}s`;
     }
     return `⟳ ${minutes}m`;
 }
